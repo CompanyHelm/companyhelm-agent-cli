@@ -4,6 +4,10 @@
   "description": "Non-interactive CLI wrapper for CompanyHelm AgentTaskService.",
   "type": "module",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CompanyHelm/agent-cli.git"
+  },
   "engines": {
     "node": ">=24"
   },
