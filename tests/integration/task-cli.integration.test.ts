@@ -219,6 +219,47 @@ afterEach(async () => {
 });
 
 describe("companyhelm-agent task CLI", () => {
+  test("prints top-level help and a friendly usage error when no command is provided", async () => {
+    const homeDirectory = await createHomeDirectory("companyhelm-agent-missing-command-");
+    temporaryDirectories.push(homeDirectory);
+
+    const result = await runCli([], homeDirectory);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toContain("Usage: companyhelm-agent [options] [command]");
+    const stderrPayload = JSON.parse(result.stderr);
+    expect(stderrPayload.error.code).toBe("CLI_USAGE_ERROR");
+    expect(stderrPayload.error.message).toContain("A command is required");
+    expect(stderrPayload.error.message).toContain("See help output");
+  });
+
+  test("prints task help and a friendly usage error when task subcommand is missing", async () => {
+    const homeDirectory = await createHomeDirectory("companyhelm-agent-missing-task-subcommand-");
+    temporaryDirectories.push(homeDirectory);
+
+    const result = await runCli(["task"], homeDirectory);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toContain("Usage: companyhelm-agent task [options] [command]");
+    const stderrPayload = JSON.parse(result.stderr);
+    expect(stderrPayload.error.code).toBe("CLI_USAGE_ERROR");
+    expect(stderrPayload.error.message).toContain("A command is required");
+    expect(stderrPayload.error.message).toContain("See help output");
+  });
+
+  test("prints help output for unknown commands", async () => {
+    const homeDirectory = await createHomeDirectory("companyhelm-agent-unknown-command-");
+    temporaryDirectories.push(homeDirectory);
+
+    const result = await runCli(["unknown"], homeDirectory);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toContain("Usage: companyhelm-agent [options] [command]");
+    const stderrPayload = JSON.parse(result.stderr);
+    expect(stderrPayload.error.code).toBe("CLI_USAGE_ERROR");
+    expect(stderrPayload.error.message).toContain("unknown command 'unknown'");
+  });
+
   test("errors when required agent_api_url is missing in config", async () => {
     const homeDirectory = await createHomeDirectory("companyhelm-agent-missing-url-");
     temporaryDirectories.push(homeDirectory);
