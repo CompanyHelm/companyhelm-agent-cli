@@ -17,6 +17,8 @@ interface AgentProtoModule {
   TaskStatus: Record<string, number>;
   CreateTaskRequestSchema: unknown;
   CreateTaskResponseSchema: unknown;
+  ListTasksRequestSchema: unknown;
+  ListTasksResponseSchema: unknown;
   GetTaskDetailsRequestSchema: unknown;
   GetTaskDetailsResponseSchema: unknown;
   AddTaskDependencyRequestSchema: unknown;
@@ -88,6 +90,15 @@ function createAgentTaskServiceDefinition(): grpc.ServiceDefinition {
       responseSerialize: (response: unknown): Buffer =>
         serializeWithSchema(agentProto.GetTaskDetailsResponseSchema, response),
       responseDeserialize: (bytes: Buffer): unknown => deserializeWithSchema(agentProto.GetTaskDetailsResponseSchema, bytes),
+    },
+    listTasks: {
+      path: buildRpcPath(methods.listTasks.name),
+      requestStream: false,
+      responseStream: false,
+      requestSerialize: (request: unknown): Buffer => serializeWithSchema(agentProto.ListTasksRequestSchema, request),
+      requestDeserialize: (bytes: Buffer): unknown => deserializeWithSchema(agentProto.ListTasksRequestSchema, bytes),
+      responseSerialize: (response: unknown): Buffer => serializeWithSchema(agentProto.ListTasksResponseSchema, response),
+      responseDeserialize: (bytes: Buffer): unknown => deserializeWithSchema(agentProto.ListTasksResponseSchema, bytes),
     },
     addTaskDependency: {
       path: buildRpcPath(methods.addTaskDependency.name),
@@ -343,6 +354,9 @@ describe("companyhelm-agent task CLI", () => {
           },
         });
       },
+      listTasks: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, { tasks: [], nextPageToken: "" });
+      },
       addTaskDependency: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
         callback(null, {});
       },
@@ -396,6 +410,118 @@ describe("companyhelm-agent task CLI", () => {
     }
   });
 
+  test("task list sends pagination options and returns JSON result", async () => {
+    const serverCalls: Array<{ authHeader: string; pageSize: number; pageToken: string }> = [];
+    const started = await startFakeServer({
+      createTask: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, {});
+      },
+      getTaskDetails: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, {});
+      },
+      listTasks: (call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        serverCalls.push({
+          authHeader: String(call.metadata.get("authorization")[0] ?? ""),
+          pageSize: Number(call.request.pageSize ?? 0),
+          pageToken: String(call.request.pageToken ?? ""),
+        });
+
+        callback(null, {
+          tasks: [
+            {
+              id: "task-1",
+              name: "First task",
+              status: agentProto.TaskStatus.PENDING,
+              createdAt: { seconds: BigInt(1700001000), nanos: 0 },
+              updatedAt: { seconds: BigInt(1700001001), nanos: 0 },
+            },
+            {
+              id: "task-2",
+              name: "Second task",
+              status: agentProto.TaskStatus.IN_PROGRESS,
+              createdAt: { seconds: BigInt(1700001002), nanos: 0 },
+              updatedAt: { seconds: BigInt(1700001003), nanos: 0 },
+            },
+          ],
+          nextPageToken: "next-token-2",
+        });
+      },
+      addTaskDependency: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, {});
+      },
+      listTaskDependencies: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, { tasks: [] });
+      },
+      listDependentTasks: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, { tasks: [] });
+      },
+      listSubTasks: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, { tasks: [] });
+      },
+      listTaskComments: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, { comments: [] });
+      },
+      updateTaskStatus: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, {});
+      },
+      addTaskComment: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, {});
+      },
+    });
+
+    try {
+      const homeDirectory = await createHomeDirectory("companyhelm-agent-task-list-");
+      temporaryDirectories.push(homeDirectory);
+
+      await writeConfig(homeDirectory, {
+        agent_api_url: `127.0.0.1:${started.port}`,
+        token: "list-token",
+      });
+
+      const result = await runCli(
+        ["task", "list", "--page-size", "2", "--page-token", "previous-token-1"],
+        homeDirectory,
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr.trim()).toBe("");
+      const stdoutPayload = JSON.parse(result.stdout);
+      expect(stdoutPayload.tasks).toHaveLength(2);
+      expect(stdoutPayload.tasks[0].id).toBe("task-1");
+      expect(stdoutPayload.nextPageToken).toBe("next-token-2");
+      expect(serverCalls).toEqual([
+        {
+          authHeader: "Bearer list-token",
+          pageSize: 2,
+          pageToken: "previous-token-1",
+        },
+      ]);
+    } finally {
+      await shutdownServer(started.server);
+    }
+  });
+
+  test("task list rejects invalid page size values", async () => {
+    const homeDirectory = await createHomeDirectory("companyhelm-agent-task-list-invalid-size-");
+    temporaryDirectories.push(homeDirectory);
+
+    await writeConfig(homeDirectory, {
+      agent_api_url: "127.0.0.1:50051",
+      token: "list-token",
+    });
+
+    const result = await runCli(
+      ["task", "list", "--page-size", "-1"],
+      homeDirectory,
+    );
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout.trim()).toBe("");
+    const stderrPayload = JSON.parse(result.stderr);
+    expect(stderrPayload.error.code).toBe("INVALID_ARGUMENT");
+    expect(String(stderrPayload.error.message)).toContain("page-size");
+  });
+
   test("task update-status maps status string to proto enum", async () => {
     const seenStatuses: number[] = [];
     const started = await startFakeServer({
@@ -404,6 +530,9 @@ describe("companyhelm-agent task CLI", () => {
       },
       getTaskDetails: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
         callback(null, {});
+      },
+      listTasks: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, { tasks: [], nextPageToken: "" });
       },
       addTaskDependency: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
         callback(null, {});
@@ -500,6 +629,9 @@ describe("companyhelm-agent task CLI", () => {
       getTaskDetails: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
         callback(null, {});
       },
+      listTasks: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, { tasks: [], nextPageToken: "" });
+      },
       addTaskDependency: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
         callback(null, {});
       },
@@ -582,6 +714,9 @@ describe("companyhelm-agent task CLI", () => {
       },
       getTaskDetails: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
         callback(null, {});
+      },
+      listTasks: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, { tasks: [], nextPageToken: "" });
       },
       addTaskDependency: (call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
         calls.push({

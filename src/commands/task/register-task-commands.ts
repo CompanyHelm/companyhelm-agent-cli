@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 import { loadAgentCliConfig } from "../../config/config.js";
+import { CliError } from "../../errors.js";
 import { AgentTaskClient, parseTaskStatus } from "../../service/agent_task_client.js";
 import { writeJsonStdout } from "../../utils/output.js";
 
@@ -13,6 +14,19 @@ async function runWithTaskClient(handler: (client: AgentTaskClient) => Promise<R
   } finally {
     client.close();
   }
+}
+
+function parseOptionalPageSize(value?: string): number | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 1000) {
+    throw new CliError("INVALID_ARGUMENT", "page-size must be an integer between 0 and 1000.");
+  }
+
+  return parsed;
 }
 
 export function registerTaskCommands(program: Command): void {
@@ -46,6 +60,19 @@ export function registerTaskCommands(program: Command): void {
           threadId: options.threadId,
           parentTaskId: options.parentTaskId,
         })));
+
+  taskCommand
+    .command("list")
+    .description("List tasks with pagination support.")
+    .option("--page-size <pageSize>", "Page size. 0 uses server default.")
+    .option("--page-token <pageToken>", "Opaque page token from a previous response.")
+    .action(async (options: { pageSize?: string; pageToken?: string }) => {
+      const pageSize = parseOptionalPageSize(options.pageSize);
+      await runWithTaskClient((client) => client.listTasks({
+        pageSize,
+        pageToken: options.pageToken,
+      }));
+    });
 
   taskCommand
     .command("get")
