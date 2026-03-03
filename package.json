@@ -8,8 +8,7 @@
     "node": ">=24"
   },
   "bin": {
-    "companyhelm-agent": "dist/cli.js",
-    "companyhelm-agent-cli": "dist/cli.js"
+    "companyhelm-agent": "dist/cli.js"
   },
   "files": [
     "dist",

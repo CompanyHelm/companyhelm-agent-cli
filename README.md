@@ -4,8 +4,7 @@ Non-interactive npm TypeScript CLI wrapper around `AgentTaskService`.
 
 ## Command Name
 
-- Primary: `companyhelm-agent`
-- Alias: `companyhelm-agent-cli`
+- `companyhelm-agent`
 
 ## Config
 
