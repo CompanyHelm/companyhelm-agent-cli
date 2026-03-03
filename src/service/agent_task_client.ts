@@ -9,6 +9,7 @@ interface AgentTaskServiceDefinition {
   typeName: string;
   method: {
     createTask: { name: string };
+    listTasks: { name: string };
     getTaskDetails: { name: string };
     addTaskDependency: { name: string };
     listTaskDependencies: { name: string };
@@ -30,6 +31,8 @@ interface AgentProtoModule {
   };
   CreateTaskRequestSchema: unknown;
   CreateTaskResponseSchema: unknown;
+  ListTasksRequestSchema: unknown;
+  ListTasksResponseSchema: unknown;
   GetTaskDetailsRequestSchema: unknown;
   GetTaskDetailsResponseSchema: unknown;
   AddTaskDependencyRequestSchema: unknown;
@@ -64,6 +67,12 @@ interface AgentTaskServiceClient extends grpc.Client {
   ): grpc.ClientUnaryCall;
   getTaskDetails(
     request: { taskId: string },
+    metadata: grpc.Metadata,
+    options: grpc.CallOptions,
+    callback: grpc.requestCallback<Record<string, unknown>>,
+  ): grpc.ClientUnaryCall;
+  listTasks(
+    request: { pageSize?: number; pageToken?: string },
     metadata: grpc.Metadata,
     options: grpc.CallOptions,
     callback: grpc.requestCallback<Record<string, unknown>>,
@@ -126,6 +135,7 @@ type Endpoint = {
 
 type AgentTaskClientMethod =
   | "createTask"
+  | "listTasks"
   | "getTaskDetails"
   | "addTaskDependency"
   | "listTaskDependencies"
@@ -277,6 +287,19 @@ function createAgentTaskServiceDefinition(pathPrefix = ""): grpc.ServiceDefiniti
         serializeWithSchema(agentProto.GetTaskDetailsResponseSchema, response),
       responseDeserialize: (bytes: Buffer): Record<string, unknown> =>
         deserializeWithSchema(agentProto.GetTaskDetailsResponseSchema, bytes),
+    },
+    listTasks: {
+      path: buildRpcPath(methods.listTasks.name, pathPrefix),
+      requestStream: false,
+      responseStream: false,
+      requestSerialize: (request: { pageSize?: number; pageToken?: string }): Buffer =>
+        serializeWithSchema(agentProto.ListTasksRequestSchema, request),
+      requestDeserialize: (bytes: Buffer): { pageSize?: number; pageToken?: string } =>
+        deserializeWithSchema(agentProto.ListTasksRequestSchema, bytes),
+      responseSerialize: (response: Record<string, unknown>): Buffer =>
+        serializeWithSchema(agentProto.ListTasksResponseSchema, response),
+      responseDeserialize: (bytes: Buffer): Record<string, unknown> =>
+        deserializeWithSchema(agentProto.ListTasksResponseSchema, bytes),
     },
     addTaskDependency: {
       path: buildRpcPath(methods.addTaskDependency.name, pathPrefix),
@@ -440,6 +463,10 @@ export class AgentTaskClient {
 
   getTaskDetails(taskId: string): Promise<Record<string, unknown>> {
     return this.unary("getTaskDetails", { taskId });
+  }
+
+  listTasks(request: { pageSize?: number; pageToken?: string } = {}): Promise<Record<string, unknown>> {
+    return this.unary("listTasks", request);
   }
 
   addTaskDependency(taskId: string, dependencyTaskId: string): Promise<Record<string, unknown>> {
