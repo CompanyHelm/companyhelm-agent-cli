@@ -6,7 +6,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/CompanyHelm/agent-cli.git"
+    "url": "https://github.com/CompanyHelm/companyhelm-agent-cli"
   },
   "engines": {
     "node": ">=24"
