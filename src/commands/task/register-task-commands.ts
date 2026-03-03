@@ -21,10 +21,45 @@ export function registerTaskCommands(program: Command): void {
     .description("Task operations via AgentTaskService.");
 
   taskCommand
+    .command("create")
+    .description("Create a task.")
+    .requiredOption("--name <name>", "Task name.")
+    .option("--description <description>", "Task description.")
+    .option("--acceptance-criteria <acceptanceCriteria>", "Acceptance criteria.")
+    .option("--assignee-principal-id <assigneePrincipalId>", "Assignee principal id.")
+    .option("--thread-id <threadId>", "Thread id.")
+    .option("--parent-task-id <parentTaskId>", "Parent task id.")
+    .action(async (options: {
+      name: string;
+      description?: string;
+      acceptanceCriteria?: string;
+      assigneePrincipalId?: string;
+      threadId?: string;
+      parentTaskId?: string;
+    }) =>
+      runWithTaskClient((client) =>
+        client.createTask({
+          name: options.name,
+          description: options.description,
+          acceptanceCriteria: options.acceptanceCriteria,
+          assigneePrincipalId: options.assigneePrincipalId,
+          threadId: options.threadId,
+          parentTaskId: options.parentTaskId,
+        })));
+
+  taskCommand
     .command("get")
     .description("Get task details.")
     .requiredOption("--task-id <taskId>", "Task id.")
     .action(async (options: { taskId: string }) => runWithTaskClient((client) => client.getTaskDetails(options.taskId)));
+
+  taskCommand
+    .command("add-dependency")
+    .description("Add a dependency edge for a task.")
+    .requiredOption("--task-id <taskId>", "Task id.")
+    .requiredOption("--dependency-task-id <dependencyTaskId>", "Dependency task id.")
+    .action(async (options: { taskId: string; dependencyTaskId: string }) =>
+      runWithTaskClient((client) => client.addTaskDependency(options.taskId, options.dependencyTaskId)));
 
   taskCommand
     .command("dependencies")
@@ -42,9 +77,7 @@ export function registerTaskCommands(program: Command): void {
     .command("subtasks")
     .description("List dependency-backed subtasks.")
     .requiredOption("--task-id <taskId>", "Task id.")
-    .option("--include-non-blocking", "Include non-blocking dependencies.")
-    .action(async (options: { taskId: string; includeNonBlocking?: boolean }) =>
-      runWithTaskClient((client) => client.listSubTasks(options.taskId, Boolean(options.includeNonBlocking))));
+    .action(async (options: { taskId: string }) => runWithTaskClient((client) => client.listSubTasks(options.taskId)));
 
   taskCommand
     .command("comments")

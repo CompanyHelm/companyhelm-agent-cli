@@ -8,7 +8,9 @@ import { CliError } from "../errors.js";
 interface AgentTaskServiceDefinition {
   typeName: string;
   method: {
+    createTask: { name: string };
     getTaskDetails: { name: string };
+    addTaskDependency: { name: string };
     listTaskDependencies: { name: string };
     listDependentTasks: { name: string };
     listSubTasks: { name: string };
@@ -26,8 +28,12 @@ interface AgentProtoModule {
     IN_PROGRESS: number;
     COMPLETED: number;
   };
+  CreateTaskRequestSchema: unknown;
+  CreateTaskResponseSchema: unknown;
   GetTaskDetailsRequestSchema: unknown;
   GetTaskDetailsResponseSchema: unknown;
+  AddTaskDependencyRequestSchema: unknown;
+  AddTaskDependencyResponseSchema: unknown;
   ListTaskDependenciesRequestSchema: unknown;
   ListTaskDependenciesResponseSchema: unknown;
   ListDependentTasksRequestSchema: unknown;
@@ -43,8 +49,27 @@ interface AgentProtoModule {
 }
 
 interface AgentTaskServiceClient extends grpc.Client {
+  createTask(
+    request: {
+      name: string;
+      description?: string;
+      acceptanceCriteria?: string;
+      assigneePrincipalId?: string;
+      threadId?: string;
+      parentTaskId?: string;
+    },
+    metadata: grpc.Metadata,
+    options: grpc.CallOptions,
+    callback: grpc.requestCallback<Record<string, unknown>>,
+  ): grpc.ClientUnaryCall;
   getTaskDetails(
     request: { taskId: string },
+    metadata: grpc.Metadata,
+    options: grpc.CallOptions,
+    callback: grpc.requestCallback<Record<string, unknown>>,
+  ): grpc.ClientUnaryCall;
+  addTaskDependency(
+    request: { taskId: string; dependencyTaskId: string },
     metadata: grpc.Metadata,
     options: grpc.CallOptions,
     callback: grpc.requestCallback<Record<string, unknown>>,
@@ -62,7 +87,7 @@ interface AgentTaskServiceClient extends grpc.Client {
     callback: grpc.requestCallback<Record<string, unknown>>,
   ): grpc.ClientUnaryCall;
   listSubTasks(
-    request: { taskId: string; includeNonBlocking: boolean },
+    request: { taskId: string },
     metadata: grpc.Metadata,
     options: grpc.CallOptions,
     callback: grpc.requestCallback<Record<string, unknown>>,
@@ -100,7 +125,9 @@ type Endpoint = {
 };
 
 type AgentTaskClientMethod =
+  | "createTask"
   | "getTaskDetails"
+  | "addTaskDependency"
   | "listTaskDependencies"
   | "listDependentTasks"
   | "listSubTasks"
@@ -213,6 +240,31 @@ function createAgentTaskServiceDefinition(pathPrefix = ""): grpc.ServiceDefiniti
   const methods = agentProto.AgentTaskService.method;
 
   return {
+    createTask: {
+      path: buildRpcPath(methods.createTask.name, pathPrefix),
+      requestStream: false,
+      responseStream: false,
+      requestSerialize: (request: {
+        name: string;
+        description?: string;
+        acceptanceCriteria?: string;
+        assigneePrincipalId?: string;
+        threadId?: string;
+        parentTaskId?: string;
+      }): Buffer => serializeWithSchema(agentProto.CreateTaskRequestSchema, request),
+      requestDeserialize: (bytes: Buffer): {
+        name: string;
+        description?: string;
+        acceptanceCriteria?: string;
+        assigneePrincipalId?: string;
+        threadId?: string;
+        parentTaskId?: string;
+      } => deserializeWithSchema(agentProto.CreateTaskRequestSchema, bytes),
+      responseSerialize: (response: Record<string, unknown>): Buffer =>
+        serializeWithSchema(agentProto.CreateTaskResponseSchema, response),
+      responseDeserialize: (bytes: Buffer): Record<string, unknown> =>
+        deserializeWithSchema(agentProto.CreateTaskResponseSchema, bytes),
+    },
     getTaskDetails: {
       path: buildRpcPath(methods.getTaskDetails.name, pathPrefix),
       requestStream: false,
@@ -225,6 +277,19 @@ function createAgentTaskServiceDefinition(pathPrefix = ""): grpc.ServiceDefiniti
         serializeWithSchema(agentProto.GetTaskDetailsResponseSchema, response),
       responseDeserialize: (bytes: Buffer): Record<string, unknown> =>
         deserializeWithSchema(agentProto.GetTaskDetailsResponseSchema, bytes),
+    },
+    addTaskDependency: {
+      path: buildRpcPath(methods.addTaskDependency.name, pathPrefix),
+      requestStream: false,
+      responseStream: false,
+      requestSerialize: (request: { taskId: string; dependencyTaskId: string }): Buffer =>
+        serializeWithSchema(agentProto.AddTaskDependencyRequestSchema, request),
+      requestDeserialize: (bytes: Buffer): { taskId: string; dependencyTaskId: string } =>
+        deserializeWithSchema(agentProto.AddTaskDependencyRequestSchema, bytes),
+      responseSerialize: (response: Record<string, unknown>): Buffer =>
+        serializeWithSchema(agentProto.AddTaskDependencyResponseSchema, response),
+      responseDeserialize: (bytes: Buffer): Record<string, unknown> =>
+        deserializeWithSchema(agentProto.AddTaskDependencyResponseSchema, bytes),
     },
     listTaskDependencies: {
       path: buildRpcPath(methods.listTaskDependencies.name, pathPrefix),
@@ -256,9 +321,9 @@ function createAgentTaskServiceDefinition(pathPrefix = ""): grpc.ServiceDefiniti
       path: buildRpcPath(methods.listSubTasks.name, pathPrefix),
       requestStream: false,
       responseStream: false,
-      requestSerialize: (request: { taskId: string; includeNonBlocking: boolean }): Buffer =>
+      requestSerialize: (request: { taskId: string }): Buffer =>
         serializeWithSchema(agentProto.ListSubTasksRequestSchema, request),
-      requestDeserialize: (bytes: Buffer): { taskId: string; includeNonBlocking: boolean } =>
+      requestDeserialize: (bytes: Buffer): { taskId: string } =>
         deserializeWithSchema(agentProto.ListSubTasksRequestSchema, bytes),
       responseSerialize: (response: Record<string, unknown>): Buffer =>
         serializeWithSchema(agentProto.ListSubTasksResponseSchema, response),
@@ -362,8 +427,23 @@ export class AgentTaskClient {
     });
   }
 
+  createTask(request: {
+    name: string;
+    description?: string;
+    acceptanceCriteria?: string;
+    assigneePrincipalId?: string;
+    threadId?: string;
+    parentTaskId?: string;
+  }): Promise<Record<string, unknown>> {
+    return this.unary("createTask", request);
+  }
+
   getTaskDetails(taskId: string): Promise<Record<string, unknown>> {
     return this.unary("getTaskDetails", { taskId });
+  }
+
+  addTaskDependency(taskId: string, dependencyTaskId: string): Promise<Record<string, unknown>> {
+    return this.unary("addTaskDependency", { taskId, dependencyTaskId });
   }
 
   listTaskDependencies(taskId: string): Promise<Record<string, unknown>> {
@@ -374,8 +454,8 @@ export class AgentTaskClient {
     return this.unary("listDependentTasks", { taskId });
   }
 
-  listSubTasks(taskId: string, includeNonBlocking: boolean): Promise<Record<string, unknown>> {
-    return this.unary("listSubTasks", { taskId, includeNonBlocking });
+  listSubTasks(taskId: string): Promise<Record<string, unknown>> {
+    return this.unary("listSubTasks", { taskId });
   }
 
   listTaskComments(taskId: string): Promise<Record<string, unknown>> {

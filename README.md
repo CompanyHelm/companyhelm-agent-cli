@@ -28,10 +28,12 @@ Required config fields:
 ## Task Commands
 
 ```bash
+companyhelm-agent task create --name <name> [--description <text>] [--acceptance-criteria <text>] [--assignee-principal-id <id>] [--thread-id <id>] [--parent-task-id <id>]
 companyhelm-agent task get --task-id <id>
+companyhelm-agent task add-dependency --task-id <id> --dependency-task-id <id>
 companyhelm-agent task dependencies --task-id <id>
 companyhelm-agent task dependent --task-id <id>
-companyhelm-agent task subtasks --task-id <id> [--include-non-blocking]
+companyhelm-agent task subtasks --task-id <id>
 companyhelm-agent task comments --task-id <id>
 companyhelm-agent task update-status --task-id <id> --status <draft|pending|in_progress|completed>
 companyhelm-agent task add-comment --task-id <id> --comment <text>

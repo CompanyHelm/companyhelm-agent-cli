@@ -15,8 +15,12 @@ interface AgentTaskServiceDefinition {
 interface AgentProtoModule {
   AgentTaskService: AgentTaskServiceDefinition;
   TaskStatus: Record<string, number>;
+  CreateTaskRequestSchema: unknown;
+  CreateTaskResponseSchema: unknown;
   GetTaskDetailsRequestSchema: unknown;
   GetTaskDetailsResponseSchema: unknown;
+  AddTaskDependencyRequestSchema: unknown;
+  AddTaskDependencyResponseSchema: unknown;
   ListTaskDependenciesRequestSchema: unknown;
   ListTaskDependenciesResponseSchema: unknown;
   ListDependentTasksRequestSchema: unknown;
@@ -66,6 +70,15 @@ function createAgentTaskServiceDefinition(): grpc.ServiceDefinition {
   const methods = agentProto.AgentTaskService.method;
 
   return {
+    createTask: {
+      path: buildRpcPath(methods.createTask.name),
+      requestStream: false,
+      responseStream: false,
+      requestSerialize: (request: unknown): Buffer => serializeWithSchema(agentProto.CreateTaskRequestSchema, request),
+      requestDeserialize: (bytes: Buffer): unknown => deserializeWithSchema(agentProto.CreateTaskRequestSchema, bytes),
+      responseSerialize: (response: unknown): Buffer => serializeWithSchema(agentProto.CreateTaskResponseSchema, response),
+      responseDeserialize: (bytes: Buffer): unknown => deserializeWithSchema(agentProto.CreateTaskResponseSchema, bytes),
+    },
     getTaskDetails: {
       path: buildRpcPath(methods.getTaskDetails.name),
       requestStream: false,
@@ -75,6 +88,19 @@ function createAgentTaskServiceDefinition(): grpc.ServiceDefinition {
       responseSerialize: (response: unknown): Buffer =>
         serializeWithSchema(agentProto.GetTaskDetailsResponseSchema, response),
       responseDeserialize: (bytes: Buffer): unknown => deserializeWithSchema(agentProto.GetTaskDetailsResponseSchema, bytes),
+    },
+    addTaskDependency: {
+      path: buildRpcPath(methods.addTaskDependency.name),
+      requestStream: false,
+      responseStream: false,
+      requestSerialize: (request: unknown): Buffer =>
+        serializeWithSchema(agentProto.AddTaskDependencyRequestSchema, request),
+      requestDeserialize: (bytes: Buffer): unknown =>
+        deserializeWithSchema(agentProto.AddTaskDependencyRequestSchema, bytes),
+      responseSerialize: (response: unknown): Buffer =>
+        serializeWithSchema(agentProto.AddTaskDependencyResponseSchema, response),
+      responseDeserialize: (bytes: Buffer): unknown =>
+        deserializeWithSchema(agentProto.AddTaskDependencyResponseSchema, bytes),
     },
     listTaskDependencies: {
       path: buildRpcPath(methods.listTaskDependencies.name),
@@ -297,6 +323,9 @@ describe("companyhelm-agent task CLI", () => {
   test("task get sends bearer token metadata and returns JSON result", async () => {
     const serverCalls: Array<{ authHeader: string; taskId: string }> = [];
     const started = await startFakeServer({
+      createTask: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, {});
+      },
       getTaskDetails: (call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
         const authHeader = String(call.metadata.get("authorization")[0] ?? "");
         serverCalls.push({
@@ -313,6 +342,9 @@ describe("companyhelm-agent task CLI", () => {
             updatedAt: { seconds: BigInt(1700000001), nanos: 0 },
           },
         });
+      },
+      addTaskDependency: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, {});
       },
       listTaskDependencies: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
         callback(null, { tasks: [] });
@@ -367,7 +399,13 @@ describe("companyhelm-agent task CLI", () => {
   test("task update-status maps status string to proto enum", async () => {
     const seenStatuses: number[] = [];
     const started = await startFakeServer({
+      createTask: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, {});
+      },
       getTaskDetails: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, {});
+      },
+      addTaskDependency: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
         callback(null, {});
       },
       listTaskDependencies: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
@@ -418,6 +456,199 @@ describe("companyhelm-agent task CLI", () => {
       const stdoutPayload = JSON.parse(result.stdout);
       expect(stdoutPayload.task.id).toBe("task-7");
       expect(seenStatuses).toEqual([agentProto.TaskStatus.IN_PROGRESS]);
+    } finally {
+      await shutdownServer(started.server);
+    }
+  });
+
+  test("task create sends request fields and returns JSON result", async () => {
+    const calls: Array<{
+      authHeader: string;
+      name: string;
+      description?: string;
+      acceptanceCriteria?: string;
+      assigneePrincipalId?: string;
+      threadId?: string;
+      parentTaskId?: string;
+    }> = [];
+    const started = await startFakeServer({
+      createTask: (call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        calls.push({
+          authHeader: String(call.metadata.get("authorization")[0] ?? ""),
+          name: call.request.name,
+          description: call.request.description,
+          acceptanceCriteria: call.request.acceptanceCriteria,
+          assigneePrincipalId: call.request.assigneePrincipalId,
+          threadId: call.request.threadId,
+          parentTaskId: call.request.parentTaskId,
+        });
+        callback(null, {
+          task: {
+            id: "task-created-1",
+            name: call.request.name,
+            description: call.request.description,
+            acceptanceCriteria: call.request.acceptanceCriteria,
+            assigneePrincipalId: call.request.assigneePrincipalId,
+            threadId: call.request.threadId,
+            parentTaskId: call.request.parentTaskId,
+            status: agentProto.TaskStatus.DRAFT,
+            createdAt: { seconds: BigInt(1700000200), nanos: 0 },
+            updatedAt: { seconds: BigInt(1700000201), nanos: 0 },
+          },
+        });
+      },
+      getTaskDetails: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, {});
+      },
+      addTaskDependency: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, {});
+      },
+      listTaskDependencies: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, { tasks: [] });
+      },
+      listDependentTasks: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, { tasks: [] });
+      },
+      listSubTasks: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, { tasks: [] });
+      },
+      listTaskComments: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, { comments: [] });
+      },
+      updateTaskStatus: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, {});
+      },
+      addTaskComment: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, {});
+      },
+    });
+
+    try {
+      const homeDirectory = await createHomeDirectory("companyhelm-agent-create-task-");
+      temporaryDirectories.push(homeDirectory);
+
+      await writeConfig(homeDirectory, {
+        agent_api_url: `127.0.0.1:${started.port}`,
+        token: "create-token",
+      });
+
+      const result = await runCli(
+        [
+          "task",
+          "create",
+          "--name",
+          "Ship parser",
+          "--description",
+          "Implement parser",
+          "--acceptance-criteria",
+          "All tests green",
+          "--assignee-principal-id",
+          "principal-1",
+          "--thread-id",
+          "thread-1",
+          "--parent-task-id",
+          "task-parent-1",
+        ],
+        homeDirectory,
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr.trim()).toBe("");
+      const stdoutPayload = JSON.parse(result.stdout);
+      expect(stdoutPayload.task.id).toBe("task-created-1");
+      expect(stdoutPayload.task.name).toBe("Ship parser");
+      expect(stdoutPayload.task.parentTaskId).toBe("task-parent-1");
+      expect(calls).toEqual([
+        {
+          authHeader: "Bearer create-token",
+          name: "Ship parser",
+          description: "Implement parser",
+          acceptanceCriteria: "All tests green",
+          assigneePrincipalId: "principal-1",
+          threadId: "thread-1",
+          parentTaskId: "task-parent-1",
+        },
+      ]);
+    } finally {
+      await shutdownServer(started.server);
+    }
+  });
+
+  test("task add-dependency sends dependency edge and returns JSON result", async () => {
+    const calls: Array<{ authHeader: string; taskId: string; dependencyTaskId: string }> = [];
+    const started = await startFakeServer({
+      createTask: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, {});
+      },
+      getTaskDetails: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, {});
+      },
+      addTaskDependency: (call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        calls.push({
+          authHeader: String(call.metadata.get("authorization")[0] ?? ""),
+          taskId: call.request.taskId,
+          dependencyTaskId: call.request.dependencyTaskId,
+        });
+        callback(null, {
+          dependency: {
+            taskId: call.request.taskId,
+            dependencyTaskId: call.request.dependencyTaskId,
+          },
+        });
+      },
+      listTaskDependencies: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, { tasks: [] });
+      },
+      listDependentTasks: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, { tasks: [] });
+      },
+      listSubTasks: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, { tasks: [] });
+      },
+      listTaskComments: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, { comments: [] });
+      },
+      updateTaskStatus: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, {});
+      },
+      addTaskComment: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        callback(null, {});
+      },
+    });
+
+    try {
+      const homeDirectory = await createHomeDirectory("companyhelm-agent-add-dependency-");
+      temporaryDirectories.push(homeDirectory);
+
+      await writeConfig(homeDirectory, {
+        agent_api_url: `127.0.0.1:${started.port}`,
+        token: "dependency-token",
+      });
+
+      const result = await runCli(
+        [
+          "task",
+          "add-dependency",
+          "--task-id",
+          "task-200",
+          "--dependency-task-id",
+          "task-100",
+        ],
+        homeDirectory,
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr.trim()).toBe("");
+      const stdoutPayload = JSON.parse(result.stdout);
+      expect(stdoutPayload.dependency.taskId).toBe("task-200");
+      expect(stdoutPayload.dependency.dependencyTaskId).toBe("task-100");
+      expect(calls).toEqual([
+        {
+          authHeader: "Bearer dependency-token",
+          taskId: "task-200",
+          dependencyTaskId: "task-100",
+        },
+      ]);
     } finally {
       await shutdownServer(started.server);
     }
