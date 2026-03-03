@@ -42,3 +42,14 @@ companyhelm-agent task add-comment --task-id <id> --comment <text>
 - Success: JSON payload on `stdout`
 - Failure: JSON error payload on `stderr`
 - Exit code: non-zero on failure
+
+## Publish
+
+Publishing to [@companyhelm/agent-cli](https://www.npmjs.com/package/@companyhelm/agent-cli) is automated by GitHub Actions:
+
+```bash
+npm version patch|minor|major
+git push --follow-tags
+``` 
+
+Then push changes, this will publish a new package with the version already bumped.
