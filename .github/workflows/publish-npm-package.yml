@@ -57,5 +57,12 @@ jobs:
       - name: Build package
         run: npm run build
 
+      - name: Verify packaged tarball install
+        run: |
+          npm pack
+          TARBALL="$(ls -1 *.tgz | head -n 1)"
+          rm -rf /tmp/companyhelm-agent-cli-pack-test
+          npm install -g --prefix /tmp/companyhelm-agent-cli-pack-test "./${TARBALL}"
+
       - name: Publish package to npmjs.com
         run: npm publish --access public --provenance

@@ -15,8 +15,7 @@
     "companyhelm-agent": "dist/cli.js"
   },
   "files": [
-    "dist",
-    "vendor"
+    "dist"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -26,7 +25,7 @@
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.11.0",
-    "@companyhelm/protos": "file:vendor/companyhelm-protos-0.5.9.tgz",
+    "@companyhelm/protos": "0.5.9",
     "@grpc/grpc-js": "^1.14.3",
     "commander": "^14.0.0",
     "zod": "^4.3.6"

@@ -57,6 +57,12 @@ jobs:
       - name: Pack npm tarball
         run: npm pack
 
+      - name: Verify packaged tarball install
+        run: |
+          TARBALL="$(ls -1 *.tgz | head -n 1)"
+          rm -rf /tmp/companyhelm-agent-cli-pack-test
+          npm install -g --prefix /tmp/companyhelm-agent-cli-pack-test "./${TARBALL}"
+
       - name: Upload npm tarball artifact
         uses: actions/upload-artifact@v4
         with:
