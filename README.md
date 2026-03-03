@@ -1,4 +1,4 @@
-# companyhelm-agent-cli
+# @companyhelm/agent-cli
 
 Non-interactive npm TypeScript CLI wrapper around `AgentTaskService`.
 

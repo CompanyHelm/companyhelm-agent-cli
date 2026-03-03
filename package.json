@@ -1,5 +1,5 @@
 {
-  "name": "companyhelm-agent-cli",
+  "name": "@companyhelm/agent-cli",
   "version": "0.0.1",
   "description": "Non-interactive CLI wrapper for CompanyHelm AgentTaskService.",
   "type": "module",
