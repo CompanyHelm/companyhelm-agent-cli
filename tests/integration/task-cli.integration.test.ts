@@ -347,6 +347,8 @@ describe("companyhelm-agent task CLI", () => {
 
       expect(result.exitCode).toBe(0);
       expect(result.stderr.trim()).toBe("");
+      expect(result.stdout).toContain('\n  "task": {\n');
+      expect(result.stdout).not.toContain('"$typeName"');
       const stdoutPayload = JSON.parse(result.stdout);
       expect(stdoutPayload.task.id).toBe("task-123");
       expect(stdoutPayload.task.name).toBe("Task One");

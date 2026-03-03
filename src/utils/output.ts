@@ -1,11 +1,15 @@
 export function stringifyJson(value: unknown): string {
-  return JSON.stringify(value, (_, nestedValue: unknown) => {
+  return JSON.stringify(value, (key: string, nestedValue: unknown) => {
+    if (key === "$typeName") {
+      return undefined;
+    }
+
     if (typeof nestedValue === "bigint") {
       return nestedValue.toString();
     }
 
     return nestedValue;
-  });
+  }, 2);
 }
 
 export function writeJsonStdout(value: unknown): void {
