@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.11.0",
-    "@companyhelm/protos": "^0.5.11",
+    "@companyhelm/protos": "^0.5.12",
     "@grpc/grpc-js": "^1.14.3",
     "commander": "^14.0.0",
     "zod": "^4.3.6"
