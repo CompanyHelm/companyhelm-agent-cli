@@ -21,13 +21,29 @@ function isGrpcServiceError(error: unknown): error is grpc.ServiceError {
   );
 }
 
+function normalizeCommanderMessage(message: string): string {
+  if (message === "(outputHelp)") {
+    return "A command is required. See help output for usage.";
+  }
+
+  if (message.includes("See help output for usage.")) {
+    return message;
+  }
+
+  if (message.endsWith(".")) {
+    return `${message} See help output for usage.`;
+  }
+
+  return `${message}. See help output for usage.`;
+}
+
 export function toCliError(error: unknown): CliError {
   if (error instanceof CliError) {
     return error;
   }
 
   if (error instanceof CommanderError) {
-    return new CliError("CLI_USAGE_ERROR", error.message, error.exitCode || 1);
+    return new CliError("CLI_USAGE_ERROR", normalizeCommanderMessage(error.message), error.exitCode || 1);
   }
 
   if (isGrpcServiceError(error)) {

@@ -20,10 +20,10 @@ function getVersion(): string {
   }
 }
 
-async function run(): Promise<void> {
+function createProgram(): Command {
   const program = new Command();
 
-  program
+  return program
     .name("companyhelm-agent")
     .description("Non-interactive CLI wrapper around CompanyHelm AgentTaskService.")
     .version(getVersion())
@@ -40,18 +40,45 @@ async function run(): Promise<void> {
       },
     })
     .exitOverride();
+}
 
+function findBestHelpCommand(program: Command, args: string[]): Command {
+  let currentCommand = program;
+
+  for (const arg of args) {
+    if (arg.startsWith("-")) {
+      break;
+    }
+
+    const nextCommand = currentCommand.commands.find((childCommand) =>
+      childCommand.name() === arg || childCommand.aliases().includes(arg));
+
+    if (!nextCommand) {
+      break;
+    }
+
+    currentCommand = nextCommand;
+  }
+
+  return currentCommand;
+}
+
+async function run(program: Command): Promise<void> {
   registerCommands(program);
-
   await program.parseAsync(process.argv);
 }
 
-run().catch((error: unknown) => {
+const program = createProgram();
+
+run(program).catch((error: unknown) => {
   if (error instanceof CommanderError) {
     if (error.code === "commander.helpDisplayed" || error.code === "commander.version") {
       process.exitCode = 0;
       return;
     }
+
+    const helpCommand = findBestHelpCommand(program, process.argv.slice(2));
+    process.stdout.write(helpCommand.helpInformation());
   }
 
   const cliError = toCliError(error);
