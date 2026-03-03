@@ -25,6 +25,21 @@ Required config fields:
 
 `agent_api_url` has no default value and must be set in the config file.
 
+## Auth Model
+
+- `token` must be a **thread secret** for AgentTask gRPC authentication.
+- `token` is **not** a JWT.
+- Reference: [Auth Matrix](https://github.com/CompanyHelm/companyhelm-api/blob/main/docs/auth-matrix.md)
+
+For local smoke tests, you can generate a thread secret from the API repo:
+
+```bash
+cd /workspace/companyhelm-api
+npm run db:seed:agent-cli
+```
+
+Use the printed `agentCliConfig` JSON in `~/.config/companyhelm-agent-cli/config.json`.
+
 ## Task Commands
 
 ```bash
