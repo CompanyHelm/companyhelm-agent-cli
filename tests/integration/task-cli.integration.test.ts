@@ -597,7 +597,6 @@ describe("companyhelm-agent task CLI", () => {
       description?: string;
       acceptanceCriteria?: string;
       assigneePrincipalId?: string;
-      threadId?: string;
       parentTaskId?: string;
     }> = [];
     const started = await startFakeServer({
@@ -608,7 +607,6 @@ describe("companyhelm-agent task CLI", () => {
           description: call.request.description,
           acceptanceCriteria: call.request.acceptanceCriteria,
           assigneePrincipalId: call.request.assigneePrincipalId,
-          threadId: call.request.threadId,
           parentTaskId: call.request.parentTaskId,
         });
         callback(null, {
@@ -618,7 +616,6 @@ describe("companyhelm-agent task CLI", () => {
             description: call.request.description,
             acceptanceCriteria: call.request.acceptanceCriteria,
             assigneePrincipalId: call.request.assigneePrincipalId,
-            threadId: call.request.threadId,
             parentTaskId: call.request.parentTaskId,
             status: agentProto.TaskStatus.DRAFT,
             createdAt: { seconds: BigInt(1700000200), nanos: 0 },
@@ -676,8 +673,6 @@ describe("companyhelm-agent task CLI", () => {
           "All tests green",
           "--assignee-principal-id",
           "principal-1",
-          "--thread-id",
-          "thread-1",
           "--parent-task-id",
           "task-parent-1",
         ],
@@ -697,7 +692,6 @@ describe("companyhelm-agent task CLI", () => {
           description: "Implement parser",
           acceptanceCriteria: "All tests green",
           assigneePrincipalId: "principal-1",
-          threadId: "thread-1",
           parentTaskId: "task-parent-1",
         },
       ]);

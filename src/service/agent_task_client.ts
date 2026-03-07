@@ -58,7 +58,6 @@ interface AgentTaskServiceClient extends grpc.Client {
       description?: string;
       acceptanceCriteria?: string;
       assigneePrincipalId?: string;
-      threadId?: string;
       parentTaskId?: string;
     },
     metadata: grpc.Metadata,
@@ -259,7 +258,6 @@ function createAgentTaskServiceDefinition(pathPrefix = ""): grpc.ServiceDefiniti
         description?: string;
         acceptanceCriteria?: string;
         assigneePrincipalId?: string;
-        threadId?: string;
         parentTaskId?: string;
       }): Buffer => serializeWithSchema(agentProto.CreateTaskRequestSchema, request),
       requestDeserialize: (bytes: Buffer): {
@@ -267,7 +265,6 @@ function createAgentTaskServiceDefinition(pathPrefix = ""): grpc.ServiceDefiniti
         description?: string;
         acceptanceCriteria?: string;
         assigneePrincipalId?: string;
-        threadId?: string;
         parentTaskId?: string;
       } => deserializeWithSchema(agentProto.CreateTaskRequestSchema, bytes),
       responseSerialize: (response: Record<string, unknown>): Buffer =>
@@ -455,7 +452,6 @@ export class AgentTaskClient {
     description?: string;
     acceptanceCriteria?: string;
     assigneePrincipalId?: string;
-    threadId?: string;
     parentTaskId?: string;
   }): Promise<Record<string, unknown>> {
     return this.unary("createTask", request);

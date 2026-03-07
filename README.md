@@ -43,7 +43,7 @@ Use the printed `agentCliConfig` JSON in `~/.config/companyhelm-agent-cli/config
 ## Task Commands
 
 ```bash
-companyhelm-agent task create --name <name> [--description <text>] [--acceptance-criteria <text>] [--assignee-principal-id <id>] [--thread-id <id>] [--parent-task-id <id>]
+companyhelm-agent task create --name <name> [--description <text>] [--acceptance-criteria <text>] [--assignee-principal-id <id>] [--parent-task-id <id>]
 companyhelm-agent task get --task-id <id>
 companyhelm-agent task add-dependency --task-id <id> --dependency-task-id <id>
 companyhelm-agent task dependencies --task-id <id>
