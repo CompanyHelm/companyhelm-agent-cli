@@ -41,14 +41,12 @@ export function registerTaskCommands(program: Command): void {
     .option("--description <description>", "Task description.")
     .option("--acceptance-criteria <acceptanceCriteria>", "Acceptance criteria.")
     .option("--assignee-principal-id <assigneePrincipalId>", "Assignee principal id.")
-    .option("--thread-id <threadId>", "Thread id.")
     .option("--parent-task-id <parentTaskId>", "Parent task id.")
     .action(async (options: {
       name: string;
       description?: string;
       acceptanceCriteria?: string;
       assigneePrincipalId?: string;
-      threadId?: string;
       parentTaskId?: string;
     }) =>
       runWithTaskClient((client) =>
@@ -57,7 +55,6 @@ export function registerTaskCommands(program: Command): void {
           description: options.description,
           acceptanceCriteria: options.acceptanceCriteria,
           assigneePrincipalId: options.assigneePrincipalId,
-          threadId: options.threadId,
           parentTaskId: options.parentTaskId,
         })));
 
