@@ -3,7 +3,7 @@
   "version": "0.0.6",
   "description": "Non-interactive CLI wrapper for CompanyHelm AgentTaskService.",
   "type": "module",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/CompanyHelm/companyhelm-agent-cli"
