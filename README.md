@@ -1,5 +1,22 @@
 # @companyhelm/agent-cli
 
+Deprecated. The supported agent integration path is the self-discoverable REST API at `/agent/v1`, not this CLI.
+
+The runner now writes the resolved agent API URL and thread secret into `agents.md`. If an agent needs contract details, fetch them from the API directly:
+
+```bash
+export AGENT_API_URL="<agent-api-url>"
+export AGENT_SECRET="<thread-secret>"
+
+curl -H "Authorization: Bearer ${AGENT_SECRET}" "${AGENT_API_URL}/"
+curl -H "Authorization: Bearer ${AGENT_SECRET}" "${AGENT_API_URL}/docs"
+curl -H "Authorization: Bearer ${AGENT_SECRET}" "${AGENT_API_URL}/openapi.json"
+```
+
+This package remains in the repository only as a legacy artifact.
+
+## Legacy CLI
+
 Non-interactive npm TypeScript CLI wrapper around `AgentTaskService`.
 
 ## Command Name
@@ -28,6 +45,7 @@ Required config fields:
 ## Auth Model
 
 - `token` must be a **thread secret** for AgentTask gRPC authentication.
+- Preferred replacement: use the REST API with `Authorization: Bearer <thread-secret>`.
 - `token` is **not** a JWT.
 - Reference: [Auth Matrix](https://github.com/CompanyHelm/companyhelm-api/blob/main/docs/auth-matrix.md)
 
