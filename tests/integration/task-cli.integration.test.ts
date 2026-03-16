@@ -12,6 +12,11 @@ interface AgentTaskServiceDefinition {
   method: Record<string, { name: string }>;
 }
 
+interface AgentQuestionServiceDefinition {
+  typeName: string;
+  method: Record<string, { name: string }>;
+}
+
 interface AgentProtoModule {
   AgentTaskService: AgentTaskServiceDefinition;
   TaskStatus: Record<string, number>;
@@ -37,6 +42,13 @@ interface AgentProtoModule {
   AddTaskCommentResponseSchema: unknown;
 }
 
+interface QuestionProtoModule {
+  AgentQuestionService: AgentQuestionServiceDefinition;
+  AnswerRank: Record<string, number>;
+  CreateQuestionRequestSchema: unknown;
+  CreateQuestionResponseSchema: unknown;
+}
+
 interface CliResult {
   exitCode: number;
   stdout: string;
@@ -54,10 +66,19 @@ const agentProtoModulePath = resolve(
   "v1",
   "agent_pb.js",
 );
+const questionProtoModulePath = resolve(
+  protosDistDirectory,
+  "gen",
+  "companyhelm",
+  "agent",
+  "v1",
+  "questions_pb.js",
+);
 const agentProto = require(agentProtoModulePath) as AgentProtoModule;
+const questionProto = require(questionProtoModulePath) as QuestionProtoModule;
 
-function buildRpcPath(methodName: string): string {
-  return `/${agentProto.AgentTaskService.typeName}/${methodName}`.replace(/\/{2,}/g, "/");
+function buildRpcPath(serviceTypeName: string, methodName: string): string {
+  return `/${serviceTypeName}/${methodName}`.replace(/\/{2,}/g, "/");
 }
 
 function serializeWithSchema<T>(schema: unknown, value: T): Buffer {
@@ -73,7 +94,7 @@ function createAgentTaskServiceDefinition(): grpc.ServiceDefinition {
 
   return {
     createTask: {
-      path: buildRpcPath(methods.createTask.name),
+      path: buildRpcPath(agentProto.AgentTaskService.typeName, methods.createTask.name),
       requestStream: false,
       responseStream: false,
       requestSerialize: (request: unknown): Buffer => serializeWithSchema(agentProto.CreateTaskRequestSchema, request),
@@ -82,7 +103,7 @@ function createAgentTaskServiceDefinition(): grpc.ServiceDefinition {
       responseDeserialize: (bytes: Buffer): unknown => deserializeWithSchema(agentProto.CreateTaskResponseSchema, bytes),
     },
     getTaskDetails: {
-      path: buildRpcPath(methods.getTaskDetails.name),
+      path: buildRpcPath(agentProto.AgentTaskService.typeName, methods.getTaskDetails.name),
       requestStream: false,
       responseStream: false,
       requestSerialize: (request: unknown): Buffer => serializeWithSchema(agentProto.GetTaskDetailsRequestSchema, request),
@@ -92,7 +113,7 @@ function createAgentTaskServiceDefinition(): grpc.ServiceDefinition {
       responseDeserialize: (bytes: Buffer): unknown => deserializeWithSchema(agentProto.GetTaskDetailsResponseSchema, bytes),
     },
     listTasks: {
-      path: buildRpcPath(methods.listTasks.name),
+      path: buildRpcPath(agentProto.AgentTaskService.typeName, methods.listTasks.name),
       requestStream: false,
       responseStream: false,
       requestSerialize: (request: unknown): Buffer => serializeWithSchema(agentProto.ListTasksRequestSchema, request),
@@ -101,7 +122,7 @@ function createAgentTaskServiceDefinition(): grpc.ServiceDefinition {
       responseDeserialize: (bytes: Buffer): unknown => deserializeWithSchema(agentProto.ListTasksResponseSchema, bytes),
     },
     addTaskDependency: {
-      path: buildRpcPath(methods.addTaskDependency.name),
+      path: buildRpcPath(agentProto.AgentTaskService.typeName, methods.addTaskDependency.name),
       requestStream: false,
       responseStream: false,
       requestSerialize: (request: unknown): Buffer =>
@@ -114,7 +135,7 @@ function createAgentTaskServiceDefinition(): grpc.ServiceDefinition {
         deserializeWithSchema(agentProto.AddTaskDependencyResponseSchema, bytes),
     },
     listTaskDependencies: {
-      path: buildRpcPath(methods.listTaskDependencies.name),
+      path: buildRpcPath(agentProto.AgentTaskService.typeName, methods.listTaskDependencies.name),
       requestStream: false,
       responseStream: false,
       requestSerialize: (request: unknown): Buffer =>
@@ -126,7 +147,7 @@ function createAgentTaskServiceDefinition(): grpc.ServiceDefinition {
         deserializeWithSchema(agentProto.ListTaskDependenciesResponseSchema, bytes),
     },
     listDependentTasks: {
-      path: buildRpcPath(methods.listDependentTasks.name),
+      path: buildRpcPath(agentProto.AgentTaskService.typeName, methods.listDependentTasks.name),
       requestStream: false,
       responseStream: false,
       requestSerialize: (request: unknown): Buffer => serializeWithSchema(agentProto.ListDependentTasksRequestSchema, request),
@@ -136,7 +157,7 @@ function createAgentTaskServiceDefinition(): grpc.ServiceDefinition {
       responseDeserialize: (bytes: Buffer): unknown => deserializeWithSchema(agentProto.ListDependentTasksResponseSchema, bytes),
     },
     listSubTasks: {
-      path: buildRpcPath(methods.listSubTasks.name),
+      path: buildRpcPath(agentProto.AgentTaskService.typeName, methods.listSubTasks.name),
       requestStream: false,
       responseStream: false,
       requestSerialize: (request: unknown): Buffer => serializeWithSchema(agentProto.ListSubTasksRequestSchema, request),
@@ -145,7 +166,7 @@ function createAgentTaskServiceDefinition(): grpc.ServiceDefinition {
       responseDeserialize: (bytes: Buffer): unknown => deserializeWithSchema(agentProto.ListSubTasksResponseSchema, bytes),
     },
     listTaskComments: {
-      path: buildRpcPath(methods.listTaskComments.name),
+      path: buildRpcPath(agentProto.AgentTaskService.typeName, methods.listTaskComments.name),
       requestStream: false,
       responseStream: false,
       requestSerialize: (request: unknown): Buffer =>
@@ -156,7 +177,7 @@ function createAgentTaskServiceDefinition(): grpc.ServiceDefinition {
       responseDeserialize: (bytes: Buffer): unknown => deserializeWithSchema(agentProto.ListTaskCommentsResponseSchema, bytes),
     },
     updateTaskStatus: {
-      path: buildRpcPath(methods.updateTaskStatus.name),
+      path: buildRpcPath(agentProto.AgentTaskService.typeName, methods.updateTaskStatus.name),
       requestStream: false,
       responseStream: false,
       requestSerialize: (request: unknown): Buffer => serializeWithSchema(agentProto.UpdateTaskStatusRequestSchema, request),
@@ -165,7 +186,7 @@ function createAgentTaskServiceDefinition(): grpc.ServiceDefinition {
       responseDeserialize: (bytes: Buffer): unknown => deserializeWithSchema(agentProto.UpdateTaskStatusResponseSchema, bytes),
     },
     addTaskComment: {
-      path: buildRpcPath(methods.addTaskComment.name),
+      path: buildRpcPath(agentProto.AgentTaskService.typeName, methods.addTaskComment.name),
       requestStream: false,
       responseStream: false,
       requestSerialize: (request: unknown): Buffer => serializeWithSchema(agentProto.AddTaskCommentRequestSchema, request),
@@ -176,9 +197,30 @@ function createAgentTaskServiceDefinition(): grpc.ServiceDefinition {
   };
 }
 
+function createAgentQuestionServiceDefinition(): grpc.ServiceDefinition {
+  const methods = questionProto.AgentQuestionService.method;
+
+  return {
+    createQuestion: {
+      path: buildRpcPath(questionProto.AgentQuestionService.typeName, methods.createQuestion.name),
+      requestStream: false,
+      responseStream: false,
+      requestSerialize: (request: unknown): Buffer =>
+        serializeWithSchema(questionProto.CreateQuestionRequestSchema, request),
+      requestDeserialize: (bytes: Buffer): unknown =>
+        deserializeWithSchema(questionProto.CreateQuestionRequestSchema, bytes),
+      responseSerialize: (response: unknown): Buffer =>
+        serializeWithSchema(questionProto.CreateQuestionResponseSchema, response),
+      responseDeserialize: (bytes: Buffer): unknown =>
+        deserializeWithSchema(questionProto.CreateQuestionResponseSchema, bytes),
+    },
+  };
+}
+
 function startFakeServer(implementation: grpc.UntypedServiceImplementation): Promise<{ server: grpc.Server; port: number }> {
   const server = new grpc.Server();
   server.addService(createAgentTaskServiceDefinition(), implementation);
+  server.addService(createAgentQuestionServiceDefinition(), implementation);
 
   return new Promise((resolvePromise, reject) => {
     server.bindAsync("127.0.0.1:0", grpc.ServerCredentials.createInsecure(), (error, port) => {
@@ -781,5 +823,110 @@ describe("companyhelm-agent task CLI", () => {
     } finally {
       await shutdownServer(started.server);
     }
+  });
+
+  test("question create sends JSON payload and bearer token metadata", async () => {
+    const calls: Array<{ authHeader: string; request: any }> = [];
+    const started = await startFakeServer({
+      createTask: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => callback(null, {}),
+      getTaskDetails: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => callback(null, {}),
+      listTasks: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => callback(null, { tasks: [], nextPageToken: "" }),
+      addTaskDependency: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => callback(null, {}),
+      listTaskDependencies: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => callback(null, { tasks: [] }),
+      listDependentTasks: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => callback(null, { tasks: [] }),
+      listSubTasks: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => callback(null, { tasks: [] }),
+      listTaskComments: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => callback(null, { comments: [] }),
+      updateTaskStatus: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => callback(null, {}),
+      addTaskComment: (_call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => callback(null, {}),
+      createQuestion: (call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void => {
+        calls.push({
+          authHeader: String(call.metadata.get("authorization")[0] ?? ""),
+          request: call.request,
+        });
+        callback(null, {});
+      },
+    });
+
+    try {
+      const homeDirectory = await createHomeDirectory("companyhelm-agent-create-question-");
+      temporaryDirectories.push(homeDirectory);
+
+      await writeConfig(homeDirectory, {
+        agent_api_url: `127.0.0.1:${started.port}`,
+        token: "question-token",
+      });
+
+      const result = await runCli(
+        [
+          "question",
+          "create",
+          "--json",
+          JSON.stringify({
+            threadId: "thread-123",
+            questionText: "Choose one",
+            options: [
+              { text: "Ship it", isRecommended: true, rank: "excellent" },
+              { text: "Wait", rank: "bad" },
+            ],
+          }),
+        ],
+        homeDirectory,
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr.trim()).toBe("");
+      expect(JSON.parse(result.stdout)).toEqual({});
+      expect(calls).toHaveLength(1);
+      expect(calls[0]).toMatchObject({
+        authHeader: "Bearer question-token",
+        request: {
+          threadId: "thread-123",
+          questionText: "Choose one",
+          options: [
+            {
+              text: "Ship it",
+              isRecommended: true,
+              rank: questionProto.AnswerRank.EXCELLENT,
+            },
+            {
+              text: "Wait",
+              rank: questionProto.AnswerRank.BAD,
+            },
+          ],
+        },
+      });
+    } finally {
+      await shutdownServer(started.server);
+    }
+  });
+
+  test("question create rejects invalid rank values before making an RPC call", async () => {
+    const homeDirectory = await createHomeDirectory("companyhelm-agent-create-question-invalid-rank-");
+    temporaryDirectories.push(homeDirectory);
+
+    await writeConfig(homeDirectory, {
+      agent_api_url: "127.0.0.1:50051",
+      token: "question-token",
+    });
+
+    const result = await runCli(
+      [
+        "question",
+        "create",
+        "--json",
+        JSON.stringify({
+          threadId: "thread-123",
+          questionText: "Choose one",
+          options: [{ text: "Ship it", rank: "legendary" }],
+        }),
+      ],
+      homeDirectory,
+    );
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout.trim()).toBe("");
+    const stderrPayload = JSON.parse(result.stderr);
+    expect(stderrPayload.error.code).toBe("INVALID_ARGUMENT");
+    expect(String(stderrPayload.error.message)).toContain("rank");
   });
 });
